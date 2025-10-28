@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Recommendation Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f4f7f6; }
+        h1, h2 { color: #333; }
+        .container { max-width: 1200px; margin: auto; }
+        .dashboards { display: flex; flex-wrap: wrap; justify-content: center; }
+        .chart { width: 45%; min-width: 400px; margin: 10px; padding: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .search-section { text-align: center; background: #fff; padding: 20px; margin: 20px auto; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #search-input { font-size: 1.2em; padding: 10px; width: 300px; }
+        #search-button { font-size: 1.2em; padding: 10px; }
+        #results { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+        .product { border: 1px solid #ddd; border-radius: 8px; background: #fff; padding: 15px; margin: 10px; width: 200px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .product img { width: 100%; height: 150px; object-fit: cover; }
+        .product h4 { font-size: 0.9em; height: 3.2em; overflow: hidden; }
+        .product p { font-size: 1.1em; font-weight: bold; color: #b12704; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Product Recommendation Dashboard</h1>
+
+        <div class="search-section">
+            <h2>Find Recommendations</h2>
+            <input type="text" id="search-input" placeholder="Enter product name (e.g., sion softside)">
+            <button id="search-button">Search</button>
+            <div id="status-message" style="margin-top: 10px;"></div>
+            <div id="results"></div>
+        </div>
+
+        <h2>Business Dashboards</h2>
+        <div class="dashboards">
+            <div id="chart1" class="chart"></div>
+            <div id="chart2" class="chart"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Render Dashboard Charts ---
+        var chart1Spec = {{ chart1JSON | safe }};
+        var chart2Spec = {{ chart2JSON | safe }};
+        Plotly.newPlot('chart1', chart1Spec.data, chart1Spec.layout);
+        Plotly.newPlot('chart2', chart2Spec.data, chart2Spec.layout);
+
+        // --- Handle Recommendation Search ---
+        var searchButton = document.getElementById('search-button');
+        var searchInput = document.getElementById('search-input');
+        var resultsDiv = document.getElementById('results');
+        var statusMsg = document.getElementById('status-message');
+
+        searchButton.addEventListener('click', function() {
+            var query = searchInput.value;
+            if (!query) return;
+
+            statusMsg.textContent = 'Searching...';
+            resultsDiv.innerHTML = '';
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Product not found or server error.');
+                }
+                return response.json();
+            })
+            .then(products => {
+                statusMsg.textContent = '';
+                products.forEach(product => {
+                    resultsDiv.innerHTML += `
+                        <div class="product">
+                            <img src="${product.imgUrl}" alt="${product.title}">
+                            <h4><a href="${product.productURL}" target="_blank">${product.title}</a></h4>
+                            <p>$${product.price}</p>
+                            <p>${product.stars} Stars</p>
+                        </div>
+                    `;
+                });
+            })
+            .catch(error => {
+                statusMsg.textContent = 'Error: Could not find recommendations.';
+                console.error('Error:', error);
+            });
+        });
+    </script>
+
+</body>
+</html>
